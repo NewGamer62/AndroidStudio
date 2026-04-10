@@ -1,0 +1,11 @@
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  uuid: ^4.3.3
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.2
+  pointycastle: ^3.9.1
+  basic_utils: ^5.7.0
+  flutter_secure_storage: ^9.0.0
