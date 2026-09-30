@@ -43,35 +43,57 @@ class _RelationScreenState extends State<RelationScreen> {
   }
 
   Future<void> _checkForNewMessages() async {
-    final el = await _service.getElement(widget.relationCode);
-    if (el != null) {
-      try {
-        final decryptedText = RSACrypto.decrypt(el.value, widget.myPrivateKey);
-        setState(() {
-          _messages.add({
-            'content': decryptedText,
-            'isMe': false,
-            'type': el.key, // MESSAGE, COLOR, ou ICON
+    try {
+      final el = await _service.getElement(widget.relationCode);
+      if (el != null) {
+        try {
+          final decryptedText = RSACrypto.decrypt(el.value, widget.myPrivateKey);
+          setState(() {
+            _messages.add({
+              'content': decryptedText,
+              'isMe': false,
+              'type': el.key, // MESSAGE, COLOR, ou ICON
+            });
           });
-        });
-      } catch (e) {
-        debugPrint("Erreur de déchiffrement: $e");
+        } catch (e) {
+          debugPrint("Erreur de déchiffrement: $e");
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to check for new messages: $e')),
+        );
       }
     }
   }
 
   void _sendMessage(String type, String content) async {
-    setState(() {
-      _messages.add({'content': content, 'isMe': true, 'type': type});
-    });
-
     final encrypted = RSACrypto.encrypt(content, widget.otherPublicKey);
     final element = ElementModel(
       relationCode: widget.relationCode,
       key: type, // On envoie le type avec
       value: encrypted,
     );
-    await _service.sendElement(element);
+
+    try {
+      final success = await _service.sendElement(element);
+      if (success) {
+        setState(() {
+          _messages.add({'content': content, 'isMe': true, 'type': type});
+        });
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send message.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error sending message: $e')),
+        );
+      }
+    }
   }
 
   @override

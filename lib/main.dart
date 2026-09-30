@@ -16,10 +16,10 @@ class AltoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Alto - Always Together',
-      debugShowCheckedModeBanner: false, // Enlève le petit bandeau "DEBUG" en haut à droite
-      theme: AltoTheme.lightTheme, // Utilise le thème créé par le Membre 2
-      initialRoute: '/', // Point de départ de l'application
-      routes: AppRoutes.routes, // Utilise la map des routes créée par le Membre 1
+      debugShowCheckedModeBanner: false,
+      theme: AltoTheme.lightTheme,
+      initialRoute: '/',
+      routes: AppRoutes.routes,
     );
   }
 }
