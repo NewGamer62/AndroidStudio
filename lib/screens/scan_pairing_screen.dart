@@ -24,17 +24,31 @@ class _ScanPairingScreenState extends State<ScanPairingScreen> {
 
     setState(() => _isProcessing = true);
     
-    final keys = KeyGenerator.generateRSAKeyPair();
-    final codeB = const Uuid().v4();
-    await KeyStorage.savePrivateKey(codeB, keys.privateKeyPem);
+    try {
+      final keys = KeyGenerator.generateRSAKeyPair();
+      final codeB = const Uuid().v4();
+      await KeyStorage.savePrivateKey(codeB, keys.privateKeyPem);
 
-    final data = await _pairingService.matchBob(codeA, codeB, keys.publicKeyPem);
-    if (data != null && mounted) {
-      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => RelationScreen(
-        relationCode: codeA, // On utilise le code d'Alice pour l'échange
-        myPrivateKey: keys.privateKeyPem,
-        otherPublicKey: data['publicKeyA'],
-      )));
+      final data = await _pairingService.matchBob(codeA, codeB, keys.publicKeyPem);
+      if (data != null && mounted) {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => RelationScreen(
+          relationCode: codeA, // On utilise le code d'Alice pour l'échange
+          myPrivateKey: keys.privateKeyPem,
+          otherPublicKey: data['publicKeyA'],
+        )));
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to connect with Alice.')),
+        );
+        setState(() => _isProcessing = false);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+        setState(() => _isProcessing = false);
+      }
     }
   }
 
