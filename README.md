@@ -1,6 +1,6 @@
 # Alto - Always Together
 
-![Alto Secure Messaging App Mockup](assets/mockup.jpg)
+<img src="assets/mockup.jpg" alt="Alto Secure Messaging App Mockup" width="300" />
 
 **Alto** is a clean, modern, and highly secure mobile messaging application built with Flutter. It focuses on privacy and simplicity, ensuring that your conversations remain yours and yours alone through robust end-to-end encryption.
 
