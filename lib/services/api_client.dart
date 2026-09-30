@@ -1,12 +1,15 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import '../crypto/key_generator.dart';
+import '../crypto/rsa_crypto.dart';
 
 /// Mock ApiClient to replace the dead backend for local testing.
 /// 
 /// This class intercepts all network requests and returns simulated responses.
-/// It maintains an in-memory state to allow testing pairing and messaging flows
-/// without relying on an external server.
+/// To allow a single recruiter to test the app locally without a second device,
+/// it simulates an intelligent "Bot" (the other party) that automatically
+/// joins pairings and replies to messages.
 class ApiClient {
   static const String baseUrl = 'https://alto.samyn.ovh';
 
@@ -20,24 +23,50 @@ class ApiClient {
   }
 
   /// Sends a POST request (Mocked)
-  /// 
-  /// Intercepts `/pairing` to create a pairing session and `/element` to send a message.
   static Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
     await _simulateDelay();
     
     if (endpoint == '/pairing') {
       final code = body['relationCode'];
+      final alicePub = body['userPublicKey'];
       _pairings[code] = {
         'status': 'pending',
-        'publicKeyA': body['userPublicKey'],
+        'publicKeyA': alicePub,
       };
+
+      // Auto-simulate Bob (the Bot) joining after 3 seconds for local portfolio testing
+      Future.delayed(const Duration(seconds: 3), () {
+        if (_pairings.containsKey(code)) {
+          final botKeys = KeyGenerator.generateRSAKeyPair();
+          _pairings[code]!['status'] = 'completed';
+          _pairings[code]!['publicKeyB'] = botKeys.publicKeyPem;
+          _pairings[code]!['botPrivateKey'] = botKeys.privateKeyPem;
+        }
+      });
+
       return http.Response(jsonEncode({'message': 'Created'}), 200);
     } else if (endpoint == '/element') {
       final code = body['relationCode'];
-      if (!_elements.containsKey(code)) {
-        _elements[code] = [];
-      }
-      _elements[code]!.add(body);
+      
+      // Instead of adding the user's message to the fetch queue (which would cause
+      // them to fetch their own message and fail to decrypt it), we trigger a Bot reply!
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!_elements.containsKey(code)) {
+          _elements[code] = [];
+        }
+        final alicePub = _pairings[code]?['publicKeyA'];
+        if (alicePub != null) {
+          final replyText = "Hello! I am the automated Mock Bot. I received your encrypted message.";
+          final encryptedReply = RSACrypto.encrypt(replyText, alicePub);
+          
+          _elements[code]!.add({
+            'relationCode': code,
+            'key': 'MESSAGE',
+            'value': encryptedReply,
+          });
+        }
+      });
+
       return http.Response(jsonEncode({'message': 'Created'}), 200);
     }
     
@@ -45,8 +74,6 @@ class ApiClient {
   }
 
   /// Sends a GET request (Mocked)
-  /// 
-  /// Intercepts `/pairing/:code/status` and `/element?relationCode=:code`.
   static Future<http.Response> get(String endpoint) async {
     await _simulateDelay();
     
@@ -60,7 +87,7 @@ class ApiClient {
     } else if (endpoint.startsWith('/element?relationCode=')) {
       final code = endpoint.split('=')[1];
       if (_elements.containsKey(code) && _elements[code]!.isNotEmpty) {
-        final el = _elements[code]!.removeAt(0); // Pop the first element
+        final el = _elements[code]!.removeAt(0); // Pop the Bot's reply
         return http.Response(jsonEncode(el), 200);
       }
       return http.Response('Not Found', 404);
@@ -70,8 +97,6 @@ class ApiClient {
   }
 
   /// Sends a PUT request (Mocked)
-  /// 
-  /// Intercepts `/pairing` to finalize pairing from Bob's side.
   static Future<http.Response> put(String endpoint, Map<String, dynamic> body) async {
     await _simulateDelay();
     
@@ -89,8 +114,6 @@ class ApiClient {
   }
 
   /// Sends a DELETE request (Mocked)
-  /// 
-  /// Intercepts `/pairing` to finalize pairing from Alice's side and fetch Bob's public key.
   static Future<http.Response> delete(String endpoint) async {
     await _simulateDelay();
     

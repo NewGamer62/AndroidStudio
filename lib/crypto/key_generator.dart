@@ -6,7 +6,11 @@ import 'package:pointycastle/key_generators/rsa_key_generator.dart';
 import 'package:pointycastle/random/fortuna_random.dart';
 import 'package:pointycastle/key_generators/api.dart';
 
+/// Provides utility functions for generating secure RSA key pairs.
 class KeyGenerator {
+  /// Initializes a secure random number generator (Fortuna) with a random seed.
+  /// 
+  /// Used internally to provide high entropy for RSA key generation.
   static FortunaRandom _secureRandom() {
     final random = FortunaRandom();
     final seed = Uint8List(32);
@@ -16,6 +20,10 @@ class KeyGenerator {
     return random;
   }
 
+  /// Generates a new RSA 2048-bit key pair.
+  /// 
+  /// Returns a record containing the `publicKeyPem` and `privateKeyPem` strings
+  /// in standard PEM format.
   static ({String publicKeyPem, String privateKeyPem}) generateRSAKeyPair() {
     final generator = RSAKeyGenerator()
       ..init(pc.ParametersWithRandom(
